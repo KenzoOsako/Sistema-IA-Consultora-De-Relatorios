@@ -53,6 +53,20 @@ def get_credentials() -> Credentials:
             "Variável GOOGLE_SERVICE_ACCOUNT_FILE não definida no .env"
         )
 
+    credentials_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+    if credentials_json:
+        import json
+        try:
+            creds_info = json.loads(credentials_json)
+            creds = Credentials.from_service_account_info(
+                creds_info,
+                scopes=GOOGLE_SCOPES,
+            )
+            logger.info("🔑 Credenciais do Sheets carregadas via variável de ambiente GOOGLE_SERVICE_ACCOUNT_JSON.")
+            return creds
+        except Exception as e:
+            raise ValueError(f"Erro ao carregar credenciais do JSON da variável de ambiente: {e}")
+
     if not os.path.exists(credentials_path):
         raise FileNotFoundError(
             f"Arquivo de credenciais não encontrado: '{credentials_path}'\n"
