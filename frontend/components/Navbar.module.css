@@ -1,0 +1,306 @@
+/* ── Navbar Layout ── */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  transition: background-color 0.4s ease, box-shadow 0.4s ease, backdrop-filter 0.4s ease;
+}
+
+/* Transparent state (at top of page) */
+.transparent {
+  background-color: transparent;
+  color: #ffffff;
+}
+
+/* Scrolled state */
+.scrolled {
+  background-color: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.10);
+  color: var(--color-text);
+}
+
+/* Inner flex container */
+.inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--padding-inline);
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+/* ── Logo ── */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+.logo:hover { opacity: 0.85; }
+
+.logoMark {
+  font-family: var(--font-heading);
+  font-size: 2.2rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.logoText {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+/* Transparent state: white logo text */
+.transparent .logoText {
+  color: #ffffff;
+}
+/* Scrolled state: dark logo text */
+.scrolled .logoText {
+  color: var(--color-text);
+}
+
+.logoSub {
+  font-weight: 300;
+  letter-spacing: 0.22em;
+  opacity: 0.85;
+}
+
+/* ── Desktop Nav ── */
+.desktopNav {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+}
+
+.navList {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  list-style: none;
+}
+
+.navLink {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.transparent .navLink {
+  color: rgba(255,255,255,0.88);
+}
+.transparent .navLink:hover {
+  color: #ffffff;
+}
+
+.scrolled .navLink {
+  color: var(--color-text-muted);
+}
+.scrolled .navLink:hover {
+  color: var(--color-primary);
+}
+
+/* Underline indicator */
+.navLink::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 60%;
+  height: 2px;
+  background-color: var(--color-primary);
+  transition: transform 0.25s ease;
+}
+.navLink:hover::after,
+.navLinkActive::after {
+  transform: translateX(-50%) scaleX(1);
+}
+.navLinkActive {
+  color: var(--color-primary) !important;
+}
+
+/* ── Desktop CTA Button ── */
+.ctaBtn {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  padding: 0.75em 1.6em;
+  border-radius: 0;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+  border: 2px solid var(--color-primary);
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.transparent .ctaBtn {
+  background-color: transparent;
+  color: #ffffff;
+  border-color: rgba(255,255,255,0.6);
+}
+.transparent .ctaBtn:hover {
+  background-color: rgba(255,255,255,0.15);
+  border-color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.scrolled .ctaBtn {
+  background-color: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+.scrolled .ctaBtn:hover {
+  background-color: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(192, 109, 59, 0.35);
+}
+
+/* ── Hamburger ── */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0.5rem;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  flex-shrink: 0;
+}
+
+.bar {
+  display: block;
+  width: 26px;
+  height: 2px;
+  border-radius: 2px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.transparent .bar { background-color: #ffffff; }
+.scrolled .bar    { background-color: var(--color-text); }
+
+/* Hamburger → X animation */
+.hamburgerOpen .bar:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.hamburgerOpen .bar:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.hamburgerOpen .bar:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ── Mobile Menu Overlay ── */
+.mobileMenu {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-secondary);
+  z-index: 999;
+  padding: 7rem 2rem 3rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+  overflow-y: auto;
+}
+
+.mobileMenuOpen {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.mobileNavList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+}
+
+.mobileNavList li {
+  opacity: 0;
+  animation: none;
+}
+.mobileMenuOpen .mobileNavList li {
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+.mobileNavLink {
+  display: block;
+  width: 100%;
+  font-family: var(--font-heading);
+  font-size: clamp(1.8rem, 6vw, 2.4rem);
+  font-weight: 400;
+  color: rgba(255,255,255,0.85);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  transition: color 0.2s ease;
+}
+.mobileNavLink:hover { color: var(--color-primary); }
+
+.mobileCtaBtn {
+  display: block;
+  width: 100%;
+  margin-top: 2rem;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 1em 2em;
+  background-color: var(--color-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.2s ease;
+}
+.mobileCtaBtn:hover { background-color: var(--color-primary-dark); }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Responsive Breakpoints ── */
+@media (max-width: 900px) {
+  .desktopNav,
+  .ctaBtn {
+    display: none;
+  }
+  .hamburger {
+    display: flex;
+  }
+  .mobileMenu {
+    display: block;
+  }
+}
