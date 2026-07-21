@@ -1,0 +1,28 @@
+# ============================================================
+# Sistema Delta Empreendimentos - Chatbot Corporativo
+# ============================================================
+
+# Google Sheets (Service Account — sem custo, sem cartão)
+google-auth==2.29.0
+google-auth-oauthlib==1.2.0
+gspread==6.1.2
+
+# Google AI Studio — SDK unificado (gratuito via API Key)
+# Documentação: https://ai.google.dev/gemini-api/docs/quickstart?lang=python
+google-genai==1.16.0
+
+# Manipulação e análise de dados
+pandas==2.2.2
+tabulate==0.9.0        # Formata DataFrames como Markdown para o LLM
+
+# Interface de linha de comando (chatbot interativo)
+rich==13.7.1           # Terminal com formatação rica
+prompt_toolkit==3.0.47
+
+# Utilitários
+python-dotenv==1.0.1   # Leitura segura do .env
+tenacity==8.3.0        # Retry automático em chamadas de API
+loguru==0.7.2          # Logging profissional
+fastapi
+uvicorn
+pydantic
