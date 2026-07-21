@@ -26,9 +26,15 @@ def ensure_initialized():
 app = FastAPI(title="Delta Empreendimentos API")
 
 # Configurar CORS (permitir que o frontend Next.js acesse)
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://delta-frontend-navy.vercel.app",  # Frontend em produção
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Em produção, especificar a origem (ex: http://localhost:3000)
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
