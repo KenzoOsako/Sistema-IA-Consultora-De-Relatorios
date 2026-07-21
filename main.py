@@ -39,29 +39,32 @@ from llm_engine import LLMEngine
 
 
 # ─── Configuração de Logging ──────────────────────────────────────────────────
-Path("logs").mkdir(exist_ok=True)
-
 logger.remove()  # Remove handler padrão do stderr
+logger.add(sys.stderr, level="INFO") # Sempre loga no console
 
-# Log detalhado em arquivo (debug completo para auditoria)
-logger.add(
-    "logs/chatbot.log",
-    rotation="10 MB",
-    retention="30 days",
-    level="DEBUG",
-    encoding="utf-8",
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {message}",
-)
-
-# Log de erros críticos separado
-logger.add(
-    "logs/errors.log",
-    rotation="5 MB",
-    retention="60 days",
-    level="ERROR",
-    encoding="utf-8",
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}\n{exception}",
-)
+# Apenas cria arquivos de log se não estiver rodando no Vercel (Serverless é read-only)
+if not os.getenv("VERCEL"):
+    Path("logs").mkdir(exist_ok=True)
+    
+    # Log detalhado em arquivo (debug completo para auditoria)
+    logger.add(
+        "logs/chatbot.log",
+        rotation="10 MB",
+        retention="30 days",
+        level="DEBUG",
+        encoding="utf-8",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {message}",
+    )
+    
+    # Log de erros críticos separado
+    logger.add(
+        "logs/errors.log",
+        rotation="5 MB",
+        retention="60 days",
+        level="ERROR",
+        encoding="utf-8",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}\n{exception}",
+    )
 
 
 # ─── Console Rich ─────────────────────────────────────────────────────────────
