@@ -10,11 +10,7 @@ export async function POST(request) {
     }
 
     // URL do backend Python (FastAPI) — usa variável de ambiente em produção
-    // Em desenvolvimento local: http://127.0.0.1:8000
-    // Em produção (Vercel): URL do projeto backend hospedado
-    const pythonBackendUrl = process.env.NEXT_PUBLIC_API_URL
-      ? `${process.env.NEXT_PUBLIC_API_URL}/api/chat`
-      : 'http://127.0.0.1:8000/api/chat';
+    const pythonBackendUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://sistema-ia-consultora-de-relat-rios.vercel.app') + '/api/chat';
 
     const response = await fetch(pythonBackendUrl, {
       method: 'POST',
