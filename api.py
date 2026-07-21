@@ -15,23 +15,15 @@ connector = None
 llm = None
 context_str = ""
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+def ensure_initialized():
     global connector, llm, context_str
-    logger.info("Iniciando servidor FastAPI e inicializando componentes do Delta...")
-    try:
+    if connector is None or llm is None:
+        logger.info("Inicializando componentes de forma preguiçosa (lazy) para serverless...")
         connector, llm = initialize_components()
         context_str = load_data(connector, force_refresh=False)
-        logger.info("Componentes carregados com sucesso. API pronta para receber requisições.")
-    except Exception as e:
-        logger.error(f"Erro na inicialização: {e}")
-        sys.exit(1)
-    
-    yield
-    
-    logger.info("Encerrando servidor...")
+        logger.info("Componentes carregados com sucesso.")
 
-app = FastAPI(title="Delta Empreendimentos API", lifespan=lifespan)
+app = FastAPI(title="Delta Empreendimentos API")
 
 # Configurar CORS (permitir que o frontend Next.js acesse)
 app.add_middleware(
@@ -51,6 +43,7 @@ class ChatResponse(BaseModel):
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
+    ensure_initialized()
     if not request.messages:
         raise HTTPException(status_code=400, detail="Nenhuma mensagem recebida")
     
@@ -81,6 +74,7 @@ async def chat_endpoint(request: ChatRequest):
 
 @app.post("/api/refresh")
 async def refresh_data():
+    ensure_initialized()
     global context_str
     try:
         context_str = load_data(connector, force_refresh=True)
@@ -89,6 +83,14 @@ async def refresh_data():
     except Exception as e:
         logger.error(f"Erro ao recarregar planilhas: {e}")
         raise HTTPException(status_code=500, detail="Erro ao recarregar dados")
+
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "API do Delta Empreendimentos está online! Envie um POST para /api/chat."}
+
+@app.get("/api/chat")
+async def chat_get_fallback():
+    return {"status": "ok", "message": "Endpoint de chat ativo. Para interagir, envie uma requisição POST."}
 
 if __name__ == "__main__":
     import uvicorn
