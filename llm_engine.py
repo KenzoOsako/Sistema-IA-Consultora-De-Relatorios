@@ -193,6 +193,44 @@ class LLMEngine:
 
         return answer
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=15),
+        reraise=True,
+    )
+    def generate_stateless(self, messages: list[dict], context: str) -> str:
+        """
+        Envia uma requisição stateless ao modelo, reconstruindo o histórico
+        a partir do array de mensagens fornecido pelo frontend. Ideal para Vercel.
+        """
+        if not messages:
+            return ""
+
+        # O histórico do SDK requer formatação específica. 
+        # Como o context sempre é injetado, colocamos ele apenas na ÚLTIMA mensagem do usuário
+        # para economizar tokens e garantir que a IA foque nos dados mais recentes.
+        
+        contents = []
+        for i, msg in enumerate(messages):
+            role = "user" if msg.get("role") in ["user", "user"] else "model"
+            content_text = msg.get("content", "")
+            
+            # Se for a última mensagem e for do user, anexar o contexto das planilhas
+            if i == len(messages) - 1 and role == "user":
+                content_text = self._build_user_message(content_text, context)
+            
+            contents.append({"role": role, "parts": [{"text": content_text}]})
+
+        logger.debug(f"📤 Enviando ao Gemini (Stateless): {len(contents)} mensagens no histórico.")
+
+        response = self._client.models.generate_content(
+            model=self.model_name,
+            contents=contents,
+            config=self._config
+        )
+
+        return response.text
+
     # ── Gerenciamento de Sessão ────────────────────────────────────────────────
 
     def reset_conversation(self) -> None:

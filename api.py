@@ -56,12 +56,10 @@ async def chat_endpoint(request: ChatRequest):
     try:
         logger.info(f"Recebendo pergunta via API: {last_message[:50]}...")
         
-        # Como o frontend gerencia o próprio histórico de mensagens visuais,
-        # Nós usamos llm.ask(question, context), que mantém o histórico real no google-genai
-        # Obs: Se quisermos manter o contexto limpo para requests de usuários diferentes, 
-        # precisaríamos criar sessões. Por ora, usaremos o histórico da engine padrão.
-        
-        answer = llm.ask(question=last_message, context=context_str)
+        # Usamos o método stateless que injeta o histórico inteiro da conversa 
+        # a cada chamada. Isso previne que o Vercel "esqueça" o histórico do chat
+        # devido à natureza efêmera de funções serverless.
+        answer = llm.generate_stateless(messages=request.messages, context=context_str)
         
         return ChatResponse(
             role="assistant",
