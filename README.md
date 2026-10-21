@@ -242,3 +242,9 @@ SistemaDeltaEmpreendimentos/
 > ⚠️ **NUNCA** versione `.env` e `credentials/service_account.json` no Git.
 
 Ambos estão no `.gitignore`. Verifique antes de qualquer `git push`.
+
+## Verificação contínua
+
+A [CI](.github/workflows/ci.yml) separa backend Python 3.12 e frontend Node.js 24. O backend instala `requirements-test.txt` em ambiente isolado e executa `python -m unittest discover -s tests -v`. Essa lista não contém as integrações de produção de Sheets/Gemini; para executar o produto, use `requirements.txt`.
+
+O frontend usa `npm ci`, testes, lint, build e `node tests/auth-flow.mjs`. O último comando inicia o Next.js de produção com provedores sintéticos em loopback e verifica o fluxo de login até logout. Nenhum segredo ou projeto Supabase hospedado é necessário para a CI. Os resultados não substituem a validação de renovação/revogação no ambiente real.
