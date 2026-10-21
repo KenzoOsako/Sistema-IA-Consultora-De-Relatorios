@@ -1,15 +1,26 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import styles from './Sidebar.module.css';
 
-export default function Sidebar() {
+export default function Sidebar({ email, role }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleLogout = () => {
-    router.push('/');
+  const [logoutError, setLogoutError] = useState('');
+  const [leaving, setLeaving] = useState(false);
+  const handleLogout = async () => {
+    setLeaving(true);
+    setLogoutError('');
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
+      if (!response.ok) throw new Error('logout');
+      router.replace('/');
+      router.refresh();
+    } catch { setLogoutError('Não foi possível sair. Tente novamente.'); }
+    finally { setLeaving(false); }
   };
 
   return (
@@ -20,8 +31,8 @@ export default function Sidebar() {
           KC
         </div>
         <div className={styles.userInfo}>
-          <h3 className={styles.userName}>Kenzo Camargo</h3>
-          <span className={styles.userRole}>Diretor de Vendas</span>
+          <h3 className={styles.userName}>{email}</h3>
+          <span className={styles.userRole}>{role === 'admin' ? 'Administrador' : 'Consulta'}</span>
         </div>
       </div>
 
@@ -60,7 +71,8 @@ export default function Sidebar() {
       </nav>
 
       <div className={styles.footer}>
-        <button className={styles.logoutBtn} onClick={handleLogout}>
+        {logoutError && <p role="alert">{logoutError}</p>}
+        <button className={styles.logoutBtn} onClick={handleLogout} disabled={leaving}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>

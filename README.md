@@ -1,5 +1,50 @@
 # Sistema Delta Empreendimentos — Chatbot Corporativo
 
+## Autenticação e estado atual
+
+O acesso privado usa **Supabase Auth**. O login simulado foi removido. Cada
+página privada verifica o usuário no servidor; o proxy de chat encaminha o
+token do próprio usuário e a API Python o verifica novamente no Supabase.
+
+Antes de executar:
+
+1. Configure um projeto Supabase e desative cadastro público e login anônimo.
+   Não use um projeto de outro cliente para este aplicativo.
+2. Um administrador deve provisionar os usuários autorizados e definir, em
+   **app_metadata**, `delta_role: "viewer"` (consulta) ou `delta_role: "admin"`
+   (consulta e atualização das bases). `user_metadata` não concede acesso.
+3. Copie `.env.example` para `.env` na raiz e `frontend/.env.example` para
+   `frontend/.env.local`. Preencha o mesmo `SUPABASE_URL` e
+   `SUPABASE_PUBLISHABLE_KEY` em ambos. Nunca use `service_role` ou chave secreta.
+   `DELTA_API_URL` é a origem da API Python, sem caminho.
+   `DELTA_APP_ORIGIN` é a origem pública exata do Next.js, como
+   `http://localhost:3000` localmente e o domínio HTTPS na produção.
+4. Instale as dependências Python e execute `uvicorn api:app --host 127.0.0.1 --port 8000`.
+   Em `frontend/`, use `npm ci` e `npm run dev`.
+
+Sem configuração, sem sessão ou sem papel permitido, o aplicativo nega acesso.
+A autenticação não cria tabelas de negócio nem migra os dados das planilhas.
+Para habilitar em produção ainda é necessário configurar o projeto e homologar
+login, renovação de sessão, logout e revogação com usuários de teste. Nenhuma
+credencial real faz parte do repositório. O logout encerra a sessão neste cliente;
+um access token já emitido pode permanecer válido até expirar. Use expiração
+curta e política de revogação compatível com a sensibilidade dos dados.
+
+### Verificações locais
+
+```bash
+python -m unittest discover -s tests -v
+cd frontend
+npm test
+npm run lint
+npm run build
+```
+
+Os testes de autorização usam um provedor simulado e dados sintéticos, sem
+chamar planilhas, Gemini ou um projeto Supabase real. A documentação legada
+abaixo descreve o protótipo original; para o código atual, o motor LLM usa
+Google AI Studio (`google-genai`), e a Service Account é exclusiva do Sheets.
+
 **Assistente de Inteligência Corporativa** baseado em Gemini (Vertex AI) para análise de dados em Google Planilhas.
 
 ---

@@ -26,3 +26,4 @@ loguru==0.7.2          # Logging profissional
 fastapi
 uvicorn
 pydantic
+httpx==0.28.1
