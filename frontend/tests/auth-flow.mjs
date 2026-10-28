@@ -99,6 +99,11 @@ try {
   const page = await request('/dashboard');
   assert.equal(page.status, 200);
   assert.ok((await page.text()).includes(user.email));
+  const financial = await request('/dashboard/financeiro');
+  assert.equal(financial.status, 200);
+  const financialHtml = await financial.text();
+  assert.equal(financialHtml.includes('app.powerbi.com/view'), false);
+  assert.ok(financialHtml.includes('Simulação'));
   const chat = await request('/api/chat', { method: 'POST', body: { messages: [{ content: 'synthetic' }] } });
   assert.equal(chat.status, 200);
   assert.equal((await chat.json()).content, 'synthetic response');
