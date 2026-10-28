@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 
 import api
+from chat_limits import MAX_BODY_BYTES, MAX_MESSAGE_BYTES, MAX_HISTORY_BYTES, MAX_MESSAGES
 
 
 class EnvironmentConfigurationTests(unittest.TestCase):
@@ -109,3 +110,55 @@ class AuthorizationTests(unittest.IsolatedAsyncioTestCase):
             response = await self.client.post('/api/chat', headers={'Authorization': 'Bearer synthetic'}, json={'messages': [{'content': 'synthetic'}]})
         self.assertEqual(response.status_code, 503)
         self.initializer.assert_not_called()
+
+    async def test_bad_or_oversized_history_never_initializes_services(self):
+        cases = [
+            ([{'content': 'a' * (MAX_MESSAGE_BYTES + 1)}], 413),
+            ([{'content': 'é' * (MAX_MESSAGE_BYTES // 2) + 'a'}], 413),
+            ([{'content': 'x'}] * (MAX_MESSAGES + 1), 413),
+            ([{'content': 'x' * MAX_MESSAGE_BYTES}] * (MAX_HISTORY_BYTES // MAX_MESSAGE_BYTES) + [{'content': 'x'}], 413),
+            ([{'content': 42}], 400), ([{'content': ' '}], 400),
+            ([{'role': 'system', 'content': 'x'}], 400),
+        ]
+        with patch('auth.httpx.AsyncClient', return_value=self.provider()):
+            for messages, status in cases:
+                response = await self.client.post('/api/chat', headers={'Authorization': 'Bearer synthetic'}, json={'messages': messages})
+                self.assertEqual(response.status_code, status)
+        self.initializer.assert_not_called()
+        api.llm.generate_stateless.assert_not_called()
+
+    async def test_multiturn_at_each_history_boundary_reaches_llm(self):
+        cases = [
+            [{'role': 'assistant', 'content': 'Olá'}, {'role': 'user', 'content': 'Pergunta'}],
+            [{'content': 'é' * (MAX_MESSAGE_BYTES // 2)}],
+            [{'content': 'x' * MAX_MESSAGE_BYTES}] * (MAX_HISTORY_BYTES // MAX_MESSAGE_BYTES),
+            [{'content': 'x'}] * MAX_MESSAGES,
+        ]
+        with patch('auth.httpx.AsyncClient', return_value=self.provider()):
+            for messages in cases:
+                response = await self.client.post('/api/chat', headers={'Authorization': 'Bearer synthetic'}, json={'messages': messages})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(api.llm.generate_stateless.call_args.kwargs['messages'], messages)
+
+    async def test_raw_body_boundary_and_chunked_lying_length(self):
+        import json
+        small = json.dumps({'messages': [{'content': 'synthetic'}]}).encode()
+        at_limit = small + b' ' * (MAX_BODY_BYTES - len(small))
+        with patch('auth.httpx.AsyncClient', return_value=self.provider()):
+            response = await self.client.post('/api/chat', headers={'Authorization': 'Bearer synthetic', 'Content-Type': 'application/json'}, content=at_limit)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.initializer.reset_mock()
+        api.llm.generate_stateless.reset_mock()
+        for path in ['/api/chat', '/api/chat/']:
+            for length in [None, '1']:
+                async def chunks():
+                    for start in range(0, len(at_limit), 4096):
+                        yield at_limit[start:start + 4096]
+                    yield b' '
+                headers = {'Authorization': 'Bearer synthetic'}
+                if length is not None:
+                    headers['Content-Length'] = length
+                response = await self.client.post(path, headers=headers, content=chunks())
+                self.assertEqual(response.status_code, 413)
+        self.initializer.assert_not_called()
+        api.llm.generate_stateless.assert_not_called()

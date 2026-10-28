@@ -21,8 +21,14 @@ não protege um URL público de incorporação.
 
 Resultados do modelo podem estar incorretos. Não há garantia de ausência de
 alucinações, de atualização das planilhas ou de disponibilidade dos provedores.
-Limites de histórico, rate limiting e quotas por usuário permanecem requisitos
-operacionais antes de expor o serviço. A validação atual é sintética.
+O chat recusa corpos acima de 256 KiB durante a leitura, antes do parse, nas
+entradas Next.js e FastAPI, mesmo sem `Content-Length` confiável. Aceita até
+40 mensagens, 32 KiB de conteúdo UTF-8 por mensagem e 128 KiB de conteúdo no
+histórico; não trunca silenciosamente. Entradas inválidas são recusadas antes
+da inicialização de Sheets/Gemini. A interface oferece “Nova conversa” para
+reiniciar o histórico local. Rate limiting, quotas por usuário, tempo de leitura
+na borda e limites do contexto vindo das planilhas ainda exigem configuração
+operacional antes de expor o serviço. A validação atual é sintética.
 
 ## Arquitetura
 

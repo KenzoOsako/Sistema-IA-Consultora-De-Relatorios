@@ -98,16 +98,34 @@ try {
   assert.ok(login.headers.getSetCookie().some(value => /httponly/i.test(value)));
   const page = await request('/dashboard');
   assert.equal(page.status, 200);
-  assert.ok((await page.text()).includes(user.email));
+  const dashboardHtml = await page.text();
+  assert.ok(dashboardHtml.includes(user.email));
+  assert.ok(dashboardHtml.includes('Nova conversa'));
   const financial = await request('/dashboard/financeiro');
   assert.equal(financial.status, 200);
   const financialHtml = await financial.text();
   assert.equal(financialHtml.includes('app.powerbi.com/view'), false);
   assert.ok(financialHtml.includes('Simulação'));
+  for (const messages of [
+    [{ content: 'x'.repeat(32769) }],
+    Array.from({ length: 41 }, () => ({ content: 'x' })),
+    [{ content: 'x'.repeat(262145) }],
+  ]) {
+    const denied = await request('/api/chat', { method: 'POST', body: { messages } });
+    assert.equal(denied.status, 413);
+    assert.ok((await denied.json()).error);
+  }
+  assert.equal(chatCalls, 0);
   const chat = await request('/api/chat', { method: 'POST', body: { messages: [{ content: 'synthetic' }] } });
   assert.equal(chat.status, 200);
   assert.equal((await chat.json()).content, 'synthetic response');
   assert.equal(chatCalls, 1);
+  if (process.argv.includes('--inspect-ui')) {
+    console.log(`Synthetic UI review: ${origin} (press Enter to finish)`);
+    process.stdin.resume();
+    await once(process.stdin, 'data');
+    process.stdin.pause();
+  }
   assert.equal((await request('/api/auth/logout', { method: 'POST' })).status, 200);
   assert.ok([307, 308].includes((await request('/dashboard')).status));
   console.log('PASS: páginas anônimas bloqueadas; papel não permitido negado; login, cookie HttpOnly, dashboard, chat e logout verificados por HTTP com provedor sintético.');

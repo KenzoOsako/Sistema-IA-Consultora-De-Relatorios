@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { authorizedUser } from '@/lib/auth';
 import { sameOrigin } from '@/lib/auth-policy.mjs';
+import { ChatInputError, readChatBody, validateMessages } from '@/lib/chat-limits.mjs';
 
 export async function POST(request) {
   if (!sameOrigin(request)) return NextResponse.json({ error: 'Origem não permitida.' }, { status: 403 });
@@ -14,12 +15,8 @@ export async function POST(request) {
     if (sessionError || !sessionData?.session?.access_token) {
       return NextResponse.json({ error: 'Sessão inválida.' }, { status: 401 });
     }
-    const body = await request.json();
-    const { messages } = body;
-
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return NextResponse.json({ error: 'Nenhuma mensagem recebida' }, { status: 400 });
-    }
+    const body = await readChatBody(request);
+    const messages = validateMessages(body?.messages);
 
     // URL do backend Python (FastAPI) — usa variável de ambiente em produção
     const base = process.env.DELTA_API_URL;
@@ -55,7 +52,10 @@ export async function POST(request) {
     // O backend Python retorna { role: "assistant", content: "..." }
     return NextResponse.json(data, { headers: { 'Cache-Control': 'no-store' } });
 
-  } catch {
+  } catch (error) {
+    if (error instanceof ChatInputError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: 'Falha de comunicação interna com o servidor de IA.' }, 
       { status: 500 }
