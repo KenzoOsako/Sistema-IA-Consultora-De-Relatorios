@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import ChartRenderer from './ChartRenderer';
 import styles from './Chatbot.module.css';
+import { validateMessages } from '../lib/chat-limits.mjs';
 
 export default function Chatbot() {
   // Extrai blocos ```chart ... ``` da resposta do Gemini
@@ -33,6 +34,7 @@ export default function Chatbot() {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [error, setError] = useState('');
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -49,6 +51,9 @@ export default function Chatbot() {
 
     const userMessage = { id: Date.now(), role: 'user', content: input };
     const updatedMessages = [...messages, userMessage];
+    try { validateMessages(updatedMessages); }
+    catch (error) { setError(error.message); return; }
+    setError('');
     
     setMessages(updatedMessages);
     setInput('');
@@ -67,6 +72,13 @@ export default function Chatbot() {
       });
 
       if (!response.ok) {
+        if ([400, 413].includes(response.status)) {
+          const failure = await response.json();
+          setError(failure.error || 'Reduza o texto ou inicie uma nova conversa.');
+          setMessages(messages);
+          setInput(userMessage.content);
+          return;
+        }
         throw new Error('Erro na comunicação com o backend');
       }
 
@@ -137,6 +149,10 @@ export default function Chatbot() {
       </div>
 
       <div className={styles.inputArea}>
+        {error && <p role="alert">{error}</p>}
+        <button type="button" disabled={isTyping} onClick={() => {
+          setMessages([]); setError('');
+        }}>Nova conversa</button>
         <form onSubmit={handleSubmit} className={styles.inputForm}>
           <input
             type="text"

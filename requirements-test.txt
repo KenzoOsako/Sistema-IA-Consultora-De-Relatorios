@@ -1,0 +1,6 @@
+# Isolated API/auth tests; does not install the Sheets or Gemini integrations.
+fastapi==0.141.1
+pydantic==2.13.4
+httpx==0.28.1
+python-dotenv==1.2.4
+loguru==0.7.2

@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import styles from './LoginForm.module.css';
 
 export default function LoginForm() {
-  const [email, setEmail] = useState('kenzo.o.camargo@gmail.com');
-  const [password, setPassword] = useState('42914551');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -16,16 +16,23 @@ export default function LoginForm() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
-    // Mock authentication delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    if (email === 'kenzo.o.camargo@gmail.com' && password === '42914551') {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!response.ok) {
+        setError('Não foi possível entrar. Confira suas credenciais e a permissão de acesso.');
+        return;
+      }
+      setPassword('');
+      router.replace('/dashboard');
+      router.refresh();
+    } catch {
+      setError('Não foi possível entrar. Tente novamente.');
+    } finally {
       setIsLoading(false);
-      router.push('/dashboard');
-    } else {
-      setIsLoading(false);
-      setError('Credenciais inválidas. Tente novamente.');
     }
   };
 

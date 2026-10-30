@@ -12,3 +12,4 @@ build/
 credentials.json
 .vercel
 .env*
+!.env.example
