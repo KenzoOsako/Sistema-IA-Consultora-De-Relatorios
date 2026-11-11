@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './LoginForm.module.css';
 
@@ -94,7 +95,7 @@ export default function LoginForm() {
           </div>
         </div>
 
-        <a href="#" className={styles.forgotPassword}>Esqueceu a senha?</a>
+        <Link href="/recuperar-senha" className={styles.forgotPassword}>Esqueceu a senha?</Link>
 
         <button 
           type="submit" 

@@ -3,16 +3,21 @@ export function allowedUser(user) {
     && ['viewer', 'admin'].includes(user.app_metadata?.delta_role));
 }
 
-export function sameOrigin(request) {
+export function appOrigin() {
   // Next.js pode reconstruir request.url com a origem interna do servidor.
   // Comparar com a origem pública configurada, nunca com Host fornecido pelo cliente.
   try {
     const expected = new URL(process.env.DELTA_APP_ORIGIN);
     const local = expected.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(expected.hostname);
     if ((!local && expected.protocol !== 'https:') || expected.username || expected.password
-      || expected.pathname !== '/' || expected.search || expected.hash) return false;
-    return request.headers.get('origin') === expected.origin;
-  } catch { return false; }
+      || expected.pathname !== '/' || expected.search || expected.hash) return null;
+    return expected.origin;
+  } catch { return null; }
+}
+
+export function sameOrigin(request) {
+  const origin = appOrigin();
+  return origin !== null && request.headers.get('origin') === origin;
 }
 
 export function authConfiguration() {

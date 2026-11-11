@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -14,25 +15,51 @@ const user = {
 };
 const issued = new Map();
 let chatCalls = 0;
+let recoveryChallenge;
+let recoveryUpdates = 0;
+let expectedPassword = 'synthetic-test-only';
 const mock = createServer(async (req, res) => {
   const send = (value, status = 200) => {
     res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(value));
   };
+  const providerUrl = new URL(req.url, 'http://localhost');
+  if (providerUrl.pathname === '/auth/v1/recover' && req.method === 'POST') {
+    let raw = ''; for await (const chunk of req) raw += chunk;
+    const payload = JSON.parse(raw);
+    recoveryChallenge = payload.code_challenge;
+    assert.equal(payload.code_challenge_method, 's256');
+    assert.equal(providerUrl.searchParams.get('redirect_to'), origin + '/recuperar-senha/confirmar');
+    return send({});
+  }
   if (req.url.startsWith('/auth/v1/token') && req.method === 'POST') {
     let raw = ''; for await (const chunk of req) raw += chunk;
     const credentials = JSON.parse(raw);
-    if (credentials.password !== 'synthetic-test-only') return send({ msg: 'invalid credentials' }, 400);
-    const record = { ...user, email: credentials.email,
+    const pkce = providerUrl.searchParams.get('grant_type') === 'pkce';
+    if (pkce) {
+      const challenge = createHash('sha256').update(credentials.code_verifier).digest('base64url');
+      if (credentials.auth_code !== 'synthetic-recovery-code' || challenge !== recoveryChallenge) {
+        return send({ msg: 'invalid recovery code' }, 400);
+      }
+      recoveryChallenge = null;
+    } else if (credentials.password !== expectedPassword) {
+      return send({ msg: 'invalid credentials' }, 400);
+    }
+    const record = pkce ? user : { ...user, email: credentials.email,
       app_metadata: credentials.email === user.email ? user.app_metadata : {} };
     const now = Math.floor(Date.now() / 1000);
     const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
-    const token = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub: user.id, exp: now + 3600, iat: now, role: 'authenticated', email: record.email })}.synthetic`;
+    const token = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub: user.id, exp: now + 3600, iat: now, role: 'authenticated', email: record.email, pkce })}.synthetic`;
     issued.set(token, record);
     return send({ access_token: token, token_type: 'bearer', expires_in: 3600, expires_at: now + 3600,
       refresh_token: 'synthetic-refresh-token', user: record });
   }
   const token = req.headers.authorization?.replace(/^Bearer /, '');
   if (req.url === '/auth/v1/user') {
+    if (req.method === 'PUT' && issued.has(token)) {
+      let raw = ''; for await (const chunk of req) raw += chunk;
+      expectedPassword = JSON.parse(raw).password;
+      recoveryUpdates++;
+    }
     return issued.has(token) ? send(issued.get(token)) : send({ msg: 'invalid token' }, 401);
   }
   if (req.url.startsWith('/auth/v1/logout')) {
@@ -60,10 +87,10 @@ const app = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start',
 });
 app.stdout.resume(); app.stderr.resume();
 const jar = new Map();
-async function request(path, { method = 'GET', body, cookie = true } = {}) {
+async function request(path, { method = 'GET', body, cookie = true, requestOrigin = origin } = {}) {
   const response = await fetch(origin + path, {
     method, redirect: 'manual', headers: {
-      Origin: origin, 'Content-Type': 'application/json',
+      Origin: requestOrigin, 'Content-Type': 'application/json',
       ...(cookie && jar.size ? { Cookie: [...jar].map(([k, v]) => `${k}=${v}`).join('; ') } : {}),
     }, body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -120,6 +147,12 @@ try {
   assert.equal(chat.status, 200);
   assert.equal((await chat.json()).content, 'synthetic response');
   assert.equal(chatCalls, 1);
+  const recovery = '/recuperar-senha';
+  const newPassword = 'synthetic-password-after-recovery';
+  const updateOptions = { method: 'POST', body: { password: newPassword } };
+  assert.equal((await request(recovery + '/atualizar', updateOptions)).status, 401,
+    'a sessão normal não autoriza a rota de recuperação');
+  assert.equal(recoveryUpdates, 0);
   if (process.argv.includes('--inspect-ui')) {
     console.log(`Synthetic UI review: ${origin} (press Enter to finish)`);
     process.stdin.resume();
@@ -128,6 +161,34 @@ try {
   }
   assert.equal((await request('/api/auth/logout', { method: 'POST' })).status, 200);
   assert.ok([307, 308].includes((await request('/dashboard')).status));
+  assert.ok((await (await request('/')).text()).includes('href="/recuperar-senha"'));
+  const requestLink = { method: 'POST', body: { email: user.email } };
+  assert.equal((await request(recovery + '/solicitar', {
+    ...requestLink, requestOrigin: 'https://example.test',
+  })).status, 403);
+  const start = await request(recovery + '/solicitar', requestLink);
+  assert.equal(start.status, 200);
+  assert.ok(start.headers.getSetCookie().some(value => /delta-recovery.*code-verifier=.*httponly/i.test(value)));
+  const callbackPath = recovery + '/confirmar?code=synthetic-recovery-code';
+  assert.equal((await request(callbackPath, { cookie: false })).headers.get('location'),
+    origin + recovery + '?invalido=1');
+  const callback = await request(callbackPath);
+  assert.equal(callback.status, 303);
+  assert.equal(callback.headers.get('location'), origin + recovery + '/nova');
+  assert.equal(callback.headers.get('referrer-policy'), 'no-referrer');
+  assert.ok((await (await request(recovery + '/nova')).text()).includes('Definir nova senha'));
+  assert.ok([307, 308].includes((await request('/dashboard')).status),
+    'uma sessão de recuperação nunca deve abrir o dashboard');
+  assert.equal((await request(recovery + '/atualizar', {
+    ...updateOptions, requestOrigin: 'https://example.test',
+  })).status, 403);
+  assert.equal((await request(recovery + '/atualizar', updateOptions)).status, 200);
+  assert.equal(recoveryUpdates, 1);
+  assert.equal((await request(recovery + '/atualizar', updateOptions)).status, 401);
+  assert.equal((await request('/api/auth/login', { method: 'POST', body: {
+    email: user.email, password: newPassword,
+  } })).status, 200);
+  console.log('PASS: recuperação PKCE, isolamento da sessão, validação de origem, alteração de senha e novo login.');
   console.log('PASS: páginas anônimas bloqueadas; papel não permitido negado; login, cookie HttpOnly, dashboard, chat e logout verificados por HTTP com provedor sintético.');
 } finally {
   app.kill('SIGTERM');

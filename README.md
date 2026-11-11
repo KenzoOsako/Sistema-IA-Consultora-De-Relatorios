@@ -63,6 +63,14 @@ Gemini. As verificações automatizadas não precisam desses serviços reais.
    caminho, e `DELTA_APP_ORIGIN` como a origem pública exata do Next.js.
    Localmente: `http://localhost:8000` e `http://localhost:3000`.
 
+Para habilitar **Esqueceu a senha?**, adicione a origem de cada ambiente
+seguida de `/recuperar-senha/confirmar` à lista de Redirect URLs no Supabase.
+O e-mail de recuperação deve usar o link de confirmação padrão, que respeita
+esse destino. Abra o link no navegador que solicitou o envio. O SMTP padrão
+do Supabase limita os envios a membros da organização e tem quota reduzida.
+Valide a entrega de e-mail e os limites de envio antes de disponibilizar o
+fluxo para usuários externos.
+
 ```bash
 python -m venv .venv
 # Windows: .venv\Scripts\activate
