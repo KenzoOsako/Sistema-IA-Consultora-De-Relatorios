@@ -1,14 +1,15 @@
 import sys
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from loguru import logger
 
 # Importar as funções de inicialização do main.py
-from main import initialize_components, load_data
+from auth import require_user, require_admin
+from chat_limits import ChatBodyLimitMiddleware, validate_messages
 
 # Variáveis globais para armazenar os componentes
 connector = None
@@ -16,6 +17,7 @@ llm = None
 context_str = ""
 
 def ensure_initialized():
+    from main import initialize_components, load_data
     global connector, llm, context_str
     if connector is None or llm is None:
         logger.info("Inicializando componentes de forma preguiçosa (lazy) para serverless...")
@@ -39,6 +41,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(ChatBodyLimitMiddleware)
 
 class ChatRequest(BaseModel):
     messages: list[dict]
@@ -47,8 +50,9 @@ class ChatResponse(BaseModel):
     role: str
     content: str
 
-@app.post("/api/chat", response_model=ChatResponse)
+@app.post("/api/chat", response_model=ChatResponse, dependencies=[Depends(require_user)])
 async def chat_endpoint(request: ChatRequest):
+    validate_messages(request.messages)
     ensure_initialized()
     if not request.messages:
         raise HTTPException(status_code=400, detail="Nenhuma mensagem recebida")
@@ -60,7 +64,7 @@ async def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=400, detail="A última mensagem não possui conteúdo válido")
         
     try:
-        logger.info(f"Recebendo pergunta via API: {last_message[:50]}...")
+        logger.info("Recebendo pergunta de usuário autorizado via API.")
         
         # Usamos o método stateless que injeta o histórico inteiro da conversa 
         # a cada chamada. Isso previne que o Vercel "esqueça" o histórico do chat
@@ -76,8 +80,9 @@ async def chat_endpoint(request: ChatRequest):
         logger.error(f"Falha ao gerar resposta do LLM: {e}")
         raise HTTPException(status_code=500, detail="Erro interno ao processar a resposta do LLM")
 
-@app.post("/api/refresh")
+@app.post("/api/refresh", dependencies=[Depends(require_admin)])
 async def refresh_data():
+    from main import load_data
     ensure_initialized()
     global context_str
     try:

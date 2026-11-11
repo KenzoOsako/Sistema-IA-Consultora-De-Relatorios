@@ -1,3 +1,4 @@
+import { requireUser } from '@/lib/auth';
 import Chatbot from '@/components/Chatbot';
 
 export const metadata = {
@@ -5,6 +6,7 @@ export const metadata = {
   description: 'Assistente de Business Intelligence.',
 };
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  await requireUser();
   return <Chatbot />;
 }

@@ -7,8 +7,8 @@ export default function FinanceiroDashboard() {
   const [ano, setAno] = useState('2026');
   const [mes, setMes] = useState('Todos');
 
-  // URL do embed do Power BI (substitua pelo link gerado na opção "Arquivo > Inserir Relatório > Site ou Portal")
-  const embedUrl = "https://app.powerbi.com/view?r=eyJrIjoiYTRlNjJmZDUtMzZmZi00OTlhLTllNTUtYzgxODU1YzBkYWZlIiwidCI6IjI1ZGU5M2FhLTc1ZWYtNDc0Ny05YjZiLWQwYTI4YzRjZGI0YyIsImMiOjEwfQ%3D%3D";
+  // Somente dados sintéticos nesta versão. Relatórios reais exigem autorização própria.
+  const embedUrl = "";
 
   // Dados mockados para o Fallback (Recharts)
   const barData = [

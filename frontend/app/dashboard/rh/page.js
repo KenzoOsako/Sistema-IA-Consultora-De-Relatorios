@@ -1,8 +1,10 @@
+import { requireUser } from '@/lib/auth';
 export const metadata = {
   title: 'Recursos Humanos | Delta Empreendimentos',
 };
 
-export default function RHPage() {
+export default async function RHPage() {
+  await requireUser();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', alignItems: 'center', textAlign: 'center', opacity: 0.7 }}>
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ marginBottom: '1rem', color: 'var(--color-primary)' }}>

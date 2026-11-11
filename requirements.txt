@@ -20,9 +20,10 @@ rich==13.7.1           # Terminal com formatação rica
 prompt_toolkit==3.0.47
 
 # Utilitários
-python-dotenv==1.0.1   # Leitura segura do .env
+python-dotenv==1.2.4   # Leitura do .env local ignorado pelo Git
 tenacity==8.3.0        # Retry automático em chamadas de API
 loguru==0.7.2          # Logging profissional
 fastapi
 uvicorn
 pydantic
+httpx==0.28.1

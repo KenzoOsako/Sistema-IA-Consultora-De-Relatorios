@@ -1,10 +1,14 @@
+import { requireUser } from '@/lib/auth';
 import Sidebar from '@/components/Sidebar';
 import styles from './dashboard.module.css';
 
-export default function DashboardLayout({ children }) {
+export const dynamic = 'force-dynamic';
+
+export default async function DashboardLayout({ children }) {
+  const { user } = await requireUser();
   return (
     <div className={styles.layout}>
-      <Sidebar />
+      <Sidebar email={user.email} role={user.app_metadata.delta_role} />
       
       <main className={styles.mainArea}>
         <header className={styles.header}>
